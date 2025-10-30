@@ -1,7 +1,5 @@
 import { getClient } from '@/lib/contentful';
-import Banner from '@/components/Banner';
-import Teaser from '@/components/Teaser';
-import RichTextBlock from '@/components/RichTextBlock';
+import GenericBlock from '@/components/GenericBlock';
 
 export const revalidate = 60;
 
@@ -16,21 +14,25 @@ async function fetchPage(slug: string, preview = false) {
   return res.items[0];
 }
 
-function renderBlock(block: any) {
-  const ct = block?.sys?.contentType?.sys?.id;
-  if (ct === 'banner') return <Banner key={block.sys.id} data={block} />;
-  if (ct === 'teaser') return <Teaser key={block.sys.id} data={block} />;
-  if (ct === 'richTextBlock') return <RichTextBlock key={block.sys.id} data={block} />;
-  return null;
+function flattenBlocks(page: any) {
+  if (!page?.fields) return [];
+  const { topSection, pageContent, extraSection } = page.fields;
+
+  const a = Array.isArray(topSection) ? topSection : [];
+  const b = pageContent ? [pageContent] : [];
+  const c = Array.isArray(extraSection) ? extraSection : [];
+
+  return [...a, ...b, ...c];
 }
 
 export default async function Page({ params }: { params: { slug: string } }) {
   const preview = process.env.NEXT_PUBLIC_ENABLE_PREVIEW === 'true';
   const page = await fetchPage(params.slug, preview);
-  const blocks = page?.fields?.blocks || [];
+  const blocks = flattenBlocks(page);
+
   return (
-    <main className="grid gap-6">
-      {blocks.map((b: any) => renderBlock(b))}
+    <main className="mx-auto max-w-5xl p-6 grid gap-6">
+      {blocks.map((b: any) => <GenericBlock key={b?.sys?.id} entry={b} />)}
     </main>
   );
 }
